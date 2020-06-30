@@ -78,24 +78,38 @@ class MapLauncherPlugin(private val context: Context, private val activity: Acti
     }
   }
 
+  private fun checkMapIsAvailableAndLaunch(args: Map<String, String>): Boolean {
+    if (!isMapAvailable(args["mapType"] as String)) {
+      return false;
+    }
+
+    val mapType = MapType.valueOf(args["mapType"] as String)
+    val url = args["url"] as String
+
+    launchMap(mapType, url)
+
+    return true;
+  }
+
   override fun onMethodCall(call: MethodCall, result: Result) {
     when (call.method) {
       "getInstalledMaps" -> {
         val installedMaps = getInstalledMaps()
         result.success(installedMaps.map { map -> map.toMap() })
       }
-      "launchMap" -> {
-        var args = call.arguments as Map<String, String>
-
-        if (!isMapAvailable(args["mapType"] as String)) {
-          result.error("MAP_NOT_AVAILABLE", "Map is not installed on a device", null)
-          return;
+      "launchMapDirections" -> {
+        if (!checkMapIsAvailableAndLaunch(call.arguments as Map<String, String>)) {
+          var installedMaps = ""
+          for (map in getInstalledMaps()) {
+            installedMaps += map.mapName + ","
+          }
+          result.error("MAP_NOT_AVAILABLE", "Map is not installed on a device: ${installedMaps}", null)
         }
-
-        val mapType = MapType.valueOf(args["mapType"] as String)
-        val url = args["url"] as String
-
-        launchMap(mapType, url)
+      }
+      "launchMap" -> {
+        if (!checkMapIsAvailableAndLaunch(call.arguments as Map<String, String>)) {
+          result.error("MAP_NOT_AVAILABLE", "Map is not installed on a device", null)
+        }
       }
       "isMapAvailable" -> {
         var args = call.arguments as Map<String, String>

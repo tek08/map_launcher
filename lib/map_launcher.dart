@@ -183,6 +183,41 @@ String _getMapUrl(
   }
 }
 
+String _getMapUrlDirections(
+    MapType mapType, String destinationAddress, Coords coords) {
+  switch (mapType) {
+    case MapType.google:
+      if (Platform.isIOS) {
+        return 'comgooglemaps://?daddr=$destinationAddress';
+      }
+      return 'https://maps.google.com/maps?daddr=$destinationAddress'; // no android yet
+    case MapType.amap:
+      return '${Platform.isIOS ? 'ios' : 'android'}amap://route/plan?sid=&slat=&slon=&sname=A&did=&dlat=${coords.latitude}&dlon=${coords.longitude}';
+    case MapType.baidu:
+      return 'baidumap://map/direction?destination=latlng:${coords.latitude},${coords.longitude}&mode=driving';
+    case MapType.apple:
+      return 'http://maps.apple.com/maps?daddr=$destinationAddress';
+    // TODO(someone): Implement the rest of these links.
+//    case MapType.waze:
+//      return 'waze://?ll=${coords.latitude},${coords.longitude}&zoom=10';
+//    case MapType.yandexNavi:
+//      return 'yandexnavi://show_point_on_map?lat=${coords.latitude}&lon=${coords.longitude}&zoom=16&no-balloon=0&desc=$title';
+//    case MapType.yandexMaps:
+//      return 'yandexmaps://maps.yandex.ru/?pt=${coords.longitude},${coords.latitude}&z=16&l=map';
+//    case MapType.citymapper:
+//      return 'citymapper://directions?endcoord=${coords.latitude},${coords.longitude}&endname=$title';
+//    case MapType.mapswithme:
+//      return "mapsme://map?v=1&ll=${coords.latitude},${coords.longitude}&n=$title";
+//    case MapType.osmand:
+//      if (Platform.isIOS) {
+//        return 'osmandmaps://navigate?lat=${coords.latitude}&lon=${coords.longitude}&title=$title';
+//      }
+//      return 'osmand.navigation:q=${coords.latitude},${coords.longitude}';
+    default:
+      return null;
+  }
+}
+
 class MapLauncher {
   static const MethodChannel _channel = const MethodChannel('map_launcher');
 
@@ -191,6 +226,21 @@ class MapLauncher {
     return List<AvailableMap>.from(
       maps.map((map) => AvailableMap.fromJson(map)),
     );
+  }
+
+  static Future<dynamic> launchMapDirections({
+    @required MapType mapType,
+    @required String destinationAddress,
+    @required Coords coords,
+  }) async {
+    final url = _getMapUrlDirections(mapType, destinationAddress, coords);
+
+    final Map<String, String> args = {
+      'mapType': _enumToString(mapType),
+      'url': Uri.encodeFull(url),
+      'destinationAddress': destinationAddress,
+    };
+    return _channel.invokeMethod('launchMapDirections', args);
   }
 
   static Future<dynamic> launchMap({

@@ -75,6 +75,18 @@ func launchMap(mapType: MapType, url: String, title: String, latitude: String, l
     }
 }
 
+func launchMapDirections(mapType: MapType, url: String, destinationAddress: String) -> Bool {
+  switch mapType {
+  default:
+    if #available(iOS 10.0, *) {
+        UIApplication.shared.open(URL(string:url)!, options: [:], completionHandler: nil)
+    } else {
+        UIApplication.shared.openURL(URL(string:url)!)
+    }
+  }
+  return true
+}
+
 
 func isMapAvailable(map: Map) -> Bool {
     if map.mapType == MapType.apple {
@@ -95,6 +107,22 @@ public class SwiftMapLauncherPlugin: NSObject, FlutterPlugin {
     switch call.method {
     case "getInstalledMaps":
       result(maps.filter({ isMapAvailable(map: $0) }).map({ $0.toMap() }))
+    case "launchMapDirections":
+      let args = call.arguments as! NSDictionary
+      let mapType = args["mapType"] as! String
+      let url = args["url"] as! String
+      let destinationAddress = args["destinationAddress"] as! String
+      
+      let map = getMapByRawMapType(type: mapType)
+      if (!isMapAvailable(map: map)) {
+        result(FlutterError(code: "MAP_NOT_AVAILABLE", message: "Map is not installed on a device", details: nil))
+        return;
+      }
+      
+      if (!launchMapDirections(mapType: map.mapType, url: url, destinationAddress: destinationAddress)) {
+        result(FlutterError(code: "DIRECTIONS_NOT_AVAILABLE", message: "Directions had issues getting started", details: nil))
+      }
+      result(true)
     case "launchMap":
       let args = call.arguments as! NSDictionary
       let mapType = args["mapType"] as! String
